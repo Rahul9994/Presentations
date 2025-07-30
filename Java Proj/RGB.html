@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Gemini ChatBot</title>
+  <style>
+    /* Animated gradient background for the entire page */
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      background: linear-gradient(45deg, #ff0000, #00ff00, #0000ff);
+      background-size: 600% 600%;
+      animation: gradientAnimation 16s ease infinite;
+      color: #333;
+    }
+
+    @keyframes gradientAnimation {
+      0% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+      100% { background-position: 0% 50%; }
+    }
+
+    /* Header styling with a semi-transparent overlay */
+    header {
+      background-color: rgba(30, 144, 255, 0.8);
+      color: white;
+      padding: 20px;
+      text-align: center;
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+    }
+
+    /* Container with a subtle glass effect */
+    .container {
+      max-width: 500px;
+      margin: 30px auto;
+      background: rgba(255, 255, 255, 0.8);
+      backdrop-filter: blur(5px);
+      border-radius: 8px;
+      box-shadow: 0 0 15px rgba(0,0,0,0.2);
+      padding: 20px;
+    }
+
+    /* Chat area styling */
+    #chatArea {
+      width: 100%;
+      height: 300px;
+      border: 1px solid #ccc;
+      padding: 10px;
+      overflow-y: scroll;
+      background-color: #f5f5f5;
+      border-radius: 4px;
+      margin-bottom: 10px;
+    }
+
+    /* Input and button styling */
+    #inputField {
+      width: calc(100% - 70px);
+      padding: 10px;
+      font-size: 16px;
+      box-sizing: border-box;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+    }
+    #sendButton {
+      width: 60px;
+      padding: 10px;
+      font-size: 16px;
+      background-color: #1e90ff;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+    }
+    #sendButton:hover {
+      background-color: #0b78e3;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>AI ChatBot</h1>
+  </header>
+  <div class="container">
+    <div id="chatArea"></div>
+    <div style="display: flex; gap: 10px; align-items: center;">
+      <input type="text" id="inputField" placeholder="Type your message..." autofocus>
+      <button id="sendButton">Send</button>
+    </div>
+  </div>
+
+  <script>
+    // API key and conversation storage
+    const API_KEY = "AIzaSyCOY9_oie8Ej4w-eyKbawqWKiqwecrIKwo";
+    let conversationHistory = [];
+    
+    // Get DOM elements
+    const chatArea = document.getElementById("chatArea");
+    const inputField = document.getElementById("inputField");
+    const sendButton = document.getElementById("sendButton");
+
+    // Utility function to escape JSON special characters
+    function sanitizeForJson(input) {
+      return input.replace(/\\/g, "\\\\")
+                  .replace(/"/g, "\\\"")
+                  .replace(/\n/g, "\\n");
+    }
+
+    // Simplified response parser: finds the first occurrence of "text": "..."
+    function parseGeminiResponse(responseBody) {
+      const textIndex = responseBody.indexOf('"text": "');
+      if (textIndex === -1) {
+        return "Error parsing response";
+      }
+      const start = textIndex + 9;
+      const end = responseBody.indexOf('"', start);
+      return responseBody.substring(start, end).replace(/\\n/g, "\n");
+    }
+
+    // Call the Gemini API and generate a response
+    function generateResponse(prompt) {
+      return new Promise((resolve, reject) => {
+        // Build the conversation context
+        let context = "";
+        conversationHistory.forEach(entry => context += entry + "\n");
+        context += "User: " + prompt;
+        const sanitizedContext = sanitizeForJson(context);
+        const requestBody = JSON.stringify({
+          contents: [{
+            parts: [{
+              text: sanitizedContext
+            }]
+          }]
+        });
+
+        // Send HTTP request using fetch
+        fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=" + API_KEY, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: requestBody
+        })
+        .then(response => response.text())
+        .then(text => {
+          const responseText = parseGeminiResponse(text);
+          // Update conversation history
+          conversationHistory.push("User: " + prompt);
+          conversationHistory.push("AI: " + responseText);
+          resolve(responseText);
+        })
+        .catch(error => {
+          console.error("Error:", error);
+          reject("Error: Could not get a response");
+        });
+      });
+    }
+
+    // Append a message to the chat area
+    function appendMessage(sender, message) {
+      chatArea.innerHTML += `<p><strong>${sender}:</strong> ${message}</p>`;
+      chatArea.scrollTop = chatArea.scrollHeight;
+    }
+
+    // Send message on button click or Enter key press
+    function sendMessage() {
+      const userInput = inputField.value.trim();
+      if (userInput === "") return;
+      
+      appendMessage("You", userInput);
+      inputField.value = "";
+      
+      generateResponse(userInput)
+        .then(responseText => {
+          appendMessage("AI", responseText);
+        })
+        .catch(error => {
+          appendMessage("Error", error);
+        });
+    }
+
+    sendButton.addEventListener("click", sendMessage);
+    inputField.addEventListener("keypress", function(event) {
+      if (event.key === "Enter") {
+        sendMessage();
+      }
+    });
+  </script>
+</body>
+</html>

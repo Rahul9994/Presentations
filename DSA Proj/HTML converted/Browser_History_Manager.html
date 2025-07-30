@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Browser History Manager</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+            background-color: #f0f0f0; /* Light gray background for a clean look */
+        }
+        header, footer {
+            margin-bottom: 20px;
+            padding: 10px;
+            background-color: white;
+            border-radius: 5px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1); /* Subtle shadow for depth */
+        }
+        label {
+            margin-right: 5px;
+        }
+        input[type="text"] {
+            margin-right: 10px;
+            padding: 5px;
+            border: 1px solid #ccc;
+            border-radius: 4px; /* Rounded corners for inputs */
+        }
+        button {
+            padding: 5px 10px;
+            margin-right: 5px;
+            background-color: #4CAF50; /* Green color for buttons */
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #45a049; /* Darker green on hover for interactivity */
+        }
+        main {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center; /* Centers children horizontally */
+        }
+        #current-page {
+            font-size: 18px;
+            font-weight: bold;
+            text-align: center;
+            margin: 20px 0;
+            width: 80%; /* Limits width for better readability */
+        }
+        #display-area {
+            width: 80%;
+            height: 200px;
+            border: 1px solid #ccc;
+            padding: 10px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            background-color: #f9f9f9; /* Light background for display area */
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <label for="url">URL:</label>
+        <input type="text" id="url">
+        <label for="title">Title:</label>
+        <input type="text" id="title">
+        <button id="visit">Visit Page</button>
+        <button id="back">Go Back</button>
+        <button id="forward">Go Forward</button>
+        <button id="undo">Undo</button>
+        <button id="redo">Redo</button>
+        <button id="bookmark">Bookmark</button>
+    </header>
+    <main>
+        <div id="current-page">Current Page: None</div>
+        <div id="display-area"></div>
+    </main>
+    <footer>
+        <label for="search">Search:</label>
+        <input type="text" id="search">
+        <button id="search-btn">Search</button>
+        <button id="view-history">View History</button>
+        <button id="clear-history">Clear History</button>
+        <button id="view-bookmarks">Go to Bookmarks</button>
+        <p style="text-align: center; margin-top: 10px;">Browser manager made by Rahul and team</p>
+    </footer>
+
+    <script>
+        const historyManager = {
+            history: [],
+            currentIndex: -1,
+            undoStack: [],
+            redoStack: [],
+            bookmarks: [],
+
+            visitPage(url, title) {
+                const page = { url, title };
+                this.undoStack.push({ history: [...this.history], currentIndex: this.currentIndex });
+                this.redoStack = [];
+                this.history = this.history.slice(0, this.currentIndex + 1);
+                this.history.push(page);
+                this.currentIndex = this.history.length - 1;
+            },
+
+            goBack() {
+                if (this.currentIndex > 0) {
+                    this.currentIndex -= 1;
+                    return true;
+                }
+                return false;
+            },
+
+            goForward() {
+                if (this.currentIndex < this.history.length - 1) {
+                    this.currentIndex += 1;
+                    return true;
+                }
+                return false;
+            },
+
+            undo() {
+                if (this.undoStack.length > 0) {
+                    this.redoStack.push({ history: [...this.history], currentIndex: this.currentIndex });
+                    const state = this.undoStack.pop();
+                    this.history = state.history;
+                    this.currentIndex = state.currentIndex;
+                    return true;
+                }
+                return false;
+            },
+
+            redo() {
+                if (this.redoStack.length > 0) {
+                    this.undoStack.push({ history: [...this.history], currentIndex: this.currentIndex });
+                    const state = this.redoStack.pop();
+                    this.history = state.history;
+                    this.currentIndex = state.currentIndex;
+                    return true;
+                }
+                return false;
+            },
+
+            bookmarkPage() {
+                if (this.currentIndex >= 0) {
+                    this.bookmarks.push(this.history[this.currentIndex]);
+                    return true;
+                }
+                return false;
+            },
+
+            searchHistory(keyword) {
+                return this.history.filter(page => 
+                    page.url.toLowerCase().includes(keyword.toLowerCase()) || 
+                    page.title.toLowerCase().includes(keyword.toLowerCase())
+                ).map(page => `${page.url} - ${page.title}`).join('\n');
+            },
+
+            viewHistory() {
+                return this.history.map(page => `${page.url} - ${page.title}`).join('\n');
+            },
+
+            clearHistory() {
+                this.undoStack.push({ history: [...this.history], currentIndex: this.currentIndex });
+                this.redoStack = [];
+                this.history = [];
+                this.currentIndex = -1;
+            },
+
+            getBookmarks() {
+                return this.bookmarks.map(page => `${page.url} - ${page.title}`).join('\n');
+            },
+
+            getCurrentPage() {
+                if (this.currentIndex >= 0) {
+                    return this.history[this.currentIndex];
+                }
+                return null;
+            }
+        };
+
+        // DOM element references
+        const urlInput = document.getElementById('url');
+        const titleInput = document.getElementById('title');
+        const visitButton = document.getElementById('visit');
+        const backButton = document.getElementById('back');
+        const forwardButton = document.getElementById('forward');
+        const undoButton = document.getElementById('undo');
+        const redoButton = document.getElementById('redo');
+        const bookmarkButton = document.getElementById('bookmark');
+        const searchInput = document.getElementById('search');
+        const searchButton = document.getElementById('search-btn');
+        const viewHistoryButton = document.getElementById('view-history');
+        const clearHistoryButton = document.getElementById('clear-history');
+        const viewBookmarksButton = document.getElementById('view-bookmarks');
+        const currentPageDiv = document.getElementById('current-page');
+        const displayArea = document.getElementById('display-area');
+
+        // Event listeners
+        visitButton.addEventListener('click', () => {
+            const url = urlInput.value.trim();
+            const title = titleInput.value.trim();
+            if (url && title) {
+                historyManager.visitPage(url, title);
+                updateDisplay();
+                urlInput.value = '';
+                titleInput.value = '';
+            } else {
+                alert('Please enter both URL and Title.');
+            }
+        });
+
+        backButton.addEventListener('click', () => {
+            if (!historyManager.goBack()) {
+                alert('Cannot go back.');
+            }
+            updateDisplay();
+        });
+
+        forwardButton.addEventListener('click', () => {
+            if (!historyManager.goForward()) {
+                alert('Cannot go forward.');
+            }
+            updateDisplay();
+        });
+
+        undoButton.addEventListener('click', () => {
+            if (!historyManager.undo()) {
+                alert('Nothing to undo.');
+            }
+            updateDisplay();
+        });
+
+        redoButton.addEventListener('click', () => {
+            if (!historyManager.redo()) {
+                alert('Nothing to redo.');
+            }
+            updateDisplay();
+        });
+
+        bookmarkButton.addEventListener('click', () => {
+            if (!historyManager.bookmarkPage()) {
+                alert('No current page to bookmark.');
+            }
+        });
+
+        searchButton.addEventListener('click', () => {
+            const keyword = searchInput.value.trim();
+            if (keyword) {
+                const results = historyManager.searchHistory(keyword);
+                displayArea.textContent = results;
+            } else {
+                alert('Please enter a keyword to search.');
+            }
+        });
+
+        viewHistoryButton.addEventListener('click', () => {
+            const historyText = historyManager.viewHistory();
+            displayArea.textContent = historyText;
+        });
+
+        clearHistoryButton.addEventListener('click', () => {
+            historyManager.clearHistory();
+            updateDisplay();
+            displayArea.textContent = '';
+        });
+
+        viewBookmarksButton.addEventListener('click', () => {
+            const bookmarksText = historyManager.getBookmarks();
+            displayArea.textContent = bookmarksText;
+        });
+
+        // Update current page display
+        function updateDisplay() {
+            const currentPage = historyManager.getCurrentPage();
+            currentPageDiv.textContent = currentPage 
+                ? `Current Page: ${currentPage.url} - ${currentPage.title}` 
+                : 'Current Page: None';
+        }
+
+        // Initial display update
+        updateDisplay();
+    </script>
+</body>
+</html>
