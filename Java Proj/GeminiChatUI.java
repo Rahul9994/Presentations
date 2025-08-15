@@ -8,7 +8,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class GeminiChatUI {
-    private static final String API_KEY = "AIzaSyCOY9_oie8Ej4w-eyKbawqWKiqwecrIKwo";
+    private static final String API_KEY = "YOUR API KEY HERE";
     private static final List<String> conversationHistory = new ArrayList<>();
     private static final HttpClient client = HttpClient.newHttpClient();
 
